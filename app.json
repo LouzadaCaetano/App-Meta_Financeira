@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "SistemaMobile",
-    "slug": "SistemaMobile",
+    "name": "Target",
+    "slug": "target",
+    "scheme": "target",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,18 +14,22 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "icon": "./assets/ios-icon.png",
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#3D44CD"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
