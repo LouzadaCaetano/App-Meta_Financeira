@@ -1,10 +1,6 @@
-import {
-  createContext,
-  PropsWithChildren,
-  useContext,
-  useMemo,
-  useState,
-} from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { Loading } from '@/components/Loading'
 import { TransactionTypes } from '@/utils/TransactionTypes'
 import { formatCurrency, formatDateShort, formatSignedCurrency } from '@/utils/format'
 
@@ -60,6 +56,11 @@ type HomeSummary = {
   }
 }
 
+type GoalsStoragePayload = {
+  goals: Goal[]
+  transactions: GoalTransaction[]
+}
+
 type GoalsContextData = {
   goals: Goal[]
   homeGoals: HomeGoalCard[]
@@ -70,55 +71,178 @@ type GoalsContextData = {
   createGoal: (input: GoalInput) => Goal
   updateGoal: (goalId: string, input: GoalInput) => Goal | undefined
   deleteGoal: (goalId: string) => void
-  createTransaction: (goalId: string, input: NewTransactionInput) => GoalTransaction
+  createTransaction: (goalId: string, input: NewTransactionInput) => GoalTransaction | undefined
   deleteTransaction: (goalId: string, transactionId: string) => void
 }
 
-const initialGoals: Goal[] = [
-  {
-    id: '1',
-    name: 'Viagem para o Rio',
-    targetValue: 1780,
-  },
-  {
-    id: '2',
-    name: 'Notebook',
-    targetValue: 4000,
-  },
-]
-
-const initialTransactions: GoalTransaction[] = [
-  {
-    id: 't1',
-    goalId: '1',
-    type: TransactionTypes.Input,
-    value: 600,
-    date: '12 abr 2026',
-    reason: 'Transferência feita para acelerar a reserva da viagem.',
-  },
-  {
-    id: 't2',
-    goalId: '1',
-    type: TransactionTypes.Output,
-    value: 20,
-    date: '08 abr 2026',
-    reason: 'Ajuste pontual para cobrir um gasto inesperado.',
-  },
-  {
-    id: 't3',
-    goalId: '2',
-    type: TransactionTypes.Input,
-    value: 1200,
-    date: '05 abr 2026',
-    reason: 'Parte do bônus mensal direcionado para o notebook.',
-  },
-]
+const STORAGE_KEY = '@metafinanceira:data'
+const EMPTY_STORAGE_PAYLOAD: GoalsStoragePayload = {
+  goals: [],
+  transactions: [],
+}
 
 const GoalsContext = createContext<GoalsContextData | null>(null)
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function parseGoal(value: unknown): Goal | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.targetValue !== 'number'
+  ) {
+    return null
+  }
+
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    targetValue: value.targetValue,
+  }
+}
+
+function parseTransaction(value: unknown): GoalTransaction | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.goalId !== 'string' ||
+    typeof value.value !== 'number' ||
+    typeof value.date !== 'string'
+  ) {
+    return null
+  }
+
+  if (value.type !== TransactionTypes.Input && value.type !== TransactionTypes.Output) {
+    return null
+  }
+
+  return {
+    id: value.id,
+    goalId: value.goalId,
+    type: value.type,
+    value: value.value,
+    date: value.date,
+    reason: typeof value.reason === 'string' && value.reason.trim() ? value.reason : undefined,
+  }
+}
+
+function isGoal(value: Goal | null): value is Goal {
+  return !!value
+}
+
+function generateId(prefix: 'goal' | 'transaction') {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function sanitizeStoragePayload(value: unknown): GoalsStoragePayload {
+  if (!isRecord(value)) {
+    return EMPTY_STORAGE_PAYLOAD
+  }
+
+  const goals = Array.isArray(value.goals)
+    ? value.goals
+        .map(parseGoal)
+        .filter(isGoal)
+        .filter((goal, index, currentGoals) => {
+          return (
+            goal.name.length > 0 &&
+            Number.isFinite(goal.targetValue) &&
+            goal.targetValue > 0 &&
+            currentGoals.findIndex((currentGoal) => currentGoal.id === goal.id) === index
+          )
+        })
+    : []
+  const goalIds = new Set(goals.map((goal) => goal.id))
+
+  const transactions = Array.isArray(value.transactions)
+    ? value.transactions
+        .map(parseTransaction)
+        .filter((transaction): transaction is GoalTransaction => {
+          return (
+            !!transaction &&
+            Number.isFinite(transaction.value) &&
+            transaction.value > 0 &&
+            goalIds.has(transaction.goalId)
+          )
+        })
+        .filter((transaction, index, currentTransactions) => {
+          return (
+            currentTransactions.findIndex((currentTransaction) => {
+              return currentTransaction.id === transaction.id
+            }) === index
+          )
+        })
+    : []
+
+  return { goals, transactions }
+}
+
+async function readGoalsStorage() {
+  try {
+    const storedValue = await AsyncStorage.getItem(STORAGE_KEY)
+
+    if (!storedValue) {
+      return EMPTY_STORAGE_PAYLOAD
+    }
+
+    return sanitizeStoragePayload(JSON.parse(storedValue))
+  } catch (error) {
+    console.warn(`[GoalsStorage] Falha ao ler a chave ${STORAGE_KEY}.`, error)
+    return EMPTY_STORAGE_PAYLOAD
+  }
+}
+
+async function writeGoalsStorage(payload: GoalsStoragePayload) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+  } catch (error) {
+    console.warn(`[GoalsStorage] Falha ao salvar a chave ${STORAGE_KEY}.`, error)
+  }
+}
+
 export function GoalsProvider({ children }: PropsWithChildren) {
-  const [goals, setGoals] = useState<Goal[]>(initialGoals)
-  const [transactions, setTransactions] = useState<GoalTransaction[]>(initialTransactions)
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [transactions, setTransactions] = useState<GoalTransaction[]>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function hydrateStorage() {
+      const payload = await readGoalsStorage()
+
+      if (!isMounted) {
+        return
+      }
+
+      setGoals(payload.goals)
+      setTransactions(payload.transactions)
+      setIsHydrated(true)
+    }
+
+    hydrateStorage()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
+    writeGoalsStorage({ goals, transactions })
+  }, [goals, isHydrated, transactions])
 
   const progressByGoal = useMemo(() => {
     return goals.reduce<Record<string, GoalProgress>>((accumulator, goal) => {
@@ -210,7 +334,7 @@ export function GoalsProvider({ children }: PropsWithChildren) {
 
   function createGoal(input: GoalInput) {
     const nextGoal: Goal = {
-      id: Date.now().toString(),
+      id: generateId('goal'),
       name: input.name.trim(),
       targetValue: input.targetValue,
     }
@@ -250,8 +374,12 @@ export function GoalsProvider({ children }: PropsWithChildren) {
   }
 
   function createTransaction(goalId: string, input: NewTransactionInput) {
+    if (!getGoalById(goalId)) {
+      return undefined
+    }
+
     const nextTransaction: GoalTransaction = {
-      id: `t-${Date.now()}`,
+      id: generateId('transaction'),
       goalId,
       type: input.type,
       value: input.value,
@@ -285,6 +413,10 @@ export function GoalsProvider({ children }: PropsWithChildren) {
     deleteGoal,
     createTransaction,
     deleteTransaction,
+  }
+
+  if (!isHydrated) {
+    return <Loading />
   }
 
   return <GoalsContext.Provider value={value}>{children}</GoalsContext.Provider>
