@@ -8,14 +8,27 @@ type Props<T> = FlatListProps<T> & {
   containerStyle?: ViewStyle
 }
 
+type WithOptionalId = {
+  id?: string | number
+}
+
 export function List<T>({
   title,
   emptyMessage,
   containerStyle,
   data,
+  keyExtractor,
   ...rest
 }: Props<T>) {
   const isEmpty = !data || data.length === 0
+
+  const defaultKeyExtractor = (item: T, index: number) => {
+    if (typeof item === 'object' && item !== null && 'id' in item) {
+      return String((item as WithOptionalId).id ?? index)
+    }
+
+    return String(index)
+  }
 
   return (
     <View style={[{ width: '100%' }, containerStyle]}>
@@ -42,8 +55,9 @@ export function List<T>({
       ) : (
         <FlatList
           data={data}
-          keyExtractor={(_, index) => String(index)}
+          keyExtractor={keyExtractor ?? defaultKeyExtractor}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          showsVerticalScrollIndicator={false}
           {...rest}
         />
       )}

@@ -10,7 +10,15 @@ const summary = {
   output: { label: 'Saídas', value: '-R$ 883,65' },
 }
 
-const targets = [
+type TargetItem = {
+  id: string
+  name: string
+  current: string
+  target: string
+  percentage: number
+}
+
+const targets: TargetItem[] = [
   {
     id: '1',
     name: 'Viagem',
@@ -42,6 +50,7 @@ export default function Index() {
               onPress={() => router.navigate(`/in-progress/${item.id}`)}
             />
           )}
+          keyExtractor={(item) => item.id}
           emptyMessage="Nenhuma meta. Toque em nova meta para criar."
           containerStyle={{ paddingHorizontal: 24 }}
         />

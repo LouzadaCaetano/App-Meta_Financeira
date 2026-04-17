@@ -7,19 +7,30 @@ type Props = PressableProps & {
   isLoading?: boolean
 }
 
-export function Button({ title, isLoading = false, ...rest }: Props) {
+export function Button({
+  title,
+  isLoading = false,
+  disabled = false,
+  style,
+  ...rest
+}: Props) {
+  const isDisabled = isLoading || disabled
+
   return (
     <Pressable
-      style={{
-        height: 56,
-        width: '100%',
-        borderRadius: 12,
-        backgroundColor: colors.blue[500],
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: isLoading ? 0.7 : 1,
-      }}
-      disabled={isLoading}
+      style={({ pressed }) => [
+        {
+          height: 56,
+          width: '100%',
+          borderRadius: 12,
+          backgroundColor: colors.blue[500],
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: isDisabled ? 0.7 : pressed ? 0.9 : 1,
+        },
+        typeof style === 'function' ? style({ pressed }) : style,
+      ]}
+      disabled={isDisabled}
       {...rest}
     >
       {isLoading ? (

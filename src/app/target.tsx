@@ -1,14 +1,25 @@
-import { SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
+import { useState } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { colors, fontFamily } from '@/theme'
+import { Button } from '@/components/Button'
+import { CurrencyInput } from '@/components/CurrencyInput'
+import { Input } from '@/components/Input'
 
 export default function Target() {
+  const [name, setName] = useState('')
+  const [targetValue, setTargetValue] = useState<number | null>(0)
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.back} onPress={() => router.back()}>
-          Voltar
-        </Text>
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable onPress={() => router.back()}>
+          <Text style={styles.back}>Voltar</Text>
+        </Pressable>
 
         <Text style={styles.title}>Nova meta</Text>
         <Text style={styles.subtitle}>
@@ -16,30 +27,24 @@ export default function Target() {
         </Text>
 
         <View style={styles.form}>
-          <View>
-            <Text style={styles.label}>Nome da meta</Text>
-            <TextInput
-              placeholder="Ex: Viagem para praia, Apple Watch"
-              placeholderTextColor={colors.gray[400]}
-              style={styles.input}
-            />
-          </View>
+          <Input
+            label="Nome da meta"
+            placeholder="Ex: Viagem para praia, Apple Watch"
+            value={name}
+            onChangeText={setName}
+          />
 
-          <View>
-            <Text style={styles.label}>Valor alvo (R$)</Text>
-            <TextInput
-              placeholder="0,00"
-              placeholderTextColor={colors.gray[400]}
-              keyboardType="numeric"
-              style={styles.input}
-            />
-          </View>
-
-          <Text style={styles.button} onPress={() => router.navigate('/')}>
-            Salvar
-          </Text>
+          <CurrencyInput
+            label="Valor alvo (R$)"
+            value={targetValue}
+            onChangeValue={setTargetValue}
+          />
         </View>
-      </View>
+
+        <View style={styles.footer}>
+          <Button title="Salvar" onPress={() => router.replace('/')} />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
@@ -70,32 +75,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
   form: {
-    marginTop: 24,
+    marginTop: 8,
     gap: 20,
   },
-  label: {
-    fontSize: 13,
-    color: colors.gray[600],
-    fontFamily: fontFamily.medium,
-    marginBottom: 8,
-  },
-  input: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[300],
-    paddingVertical: 10,
-    fontSize: 16,
-    color: colors.black,
-    fontFamily: fontFamily.regular,
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: colors.blue[500],
-    color: colors.white,
-    textAlign: 'center',
-    paddingVertical: 14,
-    borderRadius: 10,
-    overflow: 'hidden',
-    fontFamily: fontFamily.bold,
-    fontSize: 15,
+  footer: {
+    marginTop: 'auto',
   },
 })
