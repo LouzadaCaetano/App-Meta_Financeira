@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import { Button } from '@/components/Button'
 import { CurrencyInput } from '@/components/CurrencyInput'
 import { Input } from '@/components/Input'
 import { TransactionType } from '@/components/TransactionType'
+import { useGoals } from '@/context/goals-context'
 import { colors, fontFamily } from '@/theme'
 import { TransactionTypes } from '@/utils/TransactionTypes'
 
@@ -22,8 +24,10 @@ export default function Transaction() {
   const params = useLocalSearchParams<{ id: string }>()
   const targetId = Array.isArray(params.id) ? params.id[0] : params.id ?? ''
   const fallbackRoute = targetId ? `/in-progress/${targetId}` : '/'
+  const { createTransaction, getGoalById } = useGoals()
+  const goal = getGoalById(targetId)
   const [type, setType] = useState(TransactionTypes.Input)
-  const [value, setValue] = useState<number | null>(0)
+  const [value, setValue] = useState<number | null>(null)
   const [reason, setReason] = useState('')
 
   function handleBack() {
@@ -36,6 +40,22 @@ export default function Transaction() {
   }
 
   function handleSave() {
+    if (!goal) {
+      router.replace('/')
+      return
+    }
+
+    if (!value || value <= 0) {
+      Alert.alert('Valor inválido', 'Informe um valor maior que zero para continuar.')
+      return
+    }
+
+    createTransaction(targetId, {
+      type,
+      value,
+      reason,
+    })
+
     if (router.canGoBack()) {
       router.back()
       return
@@ -69,9 +89,11 @@ export default function Transaction() {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Nova transacao</Text>
+            <Text style={styles.title}>Nova transação</Text>
             <Text style={styles.subtitle}>
-              Escolha se voce vai guardar ou resgatar um valor para a meta {targetId}.
+              {goal
+                ? `Escolha se você vai guardar ou resgatar um valor para a meta ${goal.name}.`
+                : 'Escolha como registrar a movimentação da sua meta.'}
             </Text>
           </View>
 
@@ -82,7 +104,7 @@ export default function Transaction() {
 
             <Input
               label="Motivo (opcional)"
-              placeholder="Ex: Investi em um CDB"
+              placeholder="Ex.: Aporte do mês"
               value={reason}
               onChangeText={setReason}
             />

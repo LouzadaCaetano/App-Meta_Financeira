@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,28 +15,37 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@/components/Button'
 import { CurrencyInput } from '@/components/CurrencyInput'
 import { Input } from '@/components/Input'
+import { useGoals } from '@/context/goals-context'
 import { colors, fontFamily } from '@/theme'
-
-const targetsById = {
-  '1': { name: 'Viagem para o Rio', targetValue: 1780 },
-  '2': { name: 'Notebook', targetValue: 4000 },
-}
 
 export default function Target() {
   const params = useLocalSearchParams<{ id?: string }>()
   const targetId = Array.isArray(params.id) ? params.id[0] : params.id
   const isEditing = !!targetId
+  const { createGoal, deleteGoal, getGoalById, updateGoal } = useGoals()
+  const goal = targetId ? getGoalById(targetId) : undefined
 
   const previewData = useMemo(() => {
-    if (targetId && targetId in targetsById) {
-      return targetsById[targetId as keyof typeof targetsById]
+    if (goal) {
+      return goal
     }
 
     return { name: '', targetValue: 0 }
-  }, [targetId])
+  }, [goal])
 
   const [name, setName] = useState(previewData.name)
   const [targetValue, setTargetValue] = useState<number | null>(previewData.targetValue)
+
+  useEffect(() => {
+    setName(previewData.name)
+    setTargetValue(previewData.targetValue)
+  }, [previewData])
+
+  useEffect(() => {
+    if (isEditing && !goal) {
+      router.replace('/')
+    }
+  }, [goal, isEditing])
 
   function handleBack() {
     if (router.canGoBack()) {
@@ -48,14 +57,50 @@ export default function Target() {
   }
 
   function handleSave() {
-    handleBack()
+    const trimmedName = name.trim()
+
+    if (!trimmedName) {
+      Alert.alert('Nome obrigatório', 'Informe um nome para a meta.')
+      return
+    }
+
+    if (!targetValue || targetValue <= 0) {
+      Alert.alert('Valor inválido', 'Informe um valor-alvo maior que zero.')
+      return
+    }
+
+    if (targetId) {
+      updateGoal(targetId, { name: trimmedName, targetValue })
+    } else {
+      createGoal({ name: trimmedName, targetValue })
+    }
+
+    router.replace('/')
   }
 
   function handleDeletePreview() {
-    Alert.alert(
-      'Acao indisponivel',
-      'A exclusao da meta ainda nao foi implementada nesta etapa.',
-    )
+    if (!targetId) {
+      return
+    }
+
+    Alert.alert('Excluir meta', 'Deseja remover esta meta e todas as transações dela?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: () => {
+          deleteGoal(targetId)
+          router.replace('/')
+        },
+      },
+    ])
+  }
+
+  if (isEditing && !goal) {
+    return null
   }
 
   return (
@@ -96,7 +141,7 @@ export default function Target() {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Meta</Text>
+            <Text style={styles.title}>{isEditing ? 'Editar meta' : 'Nova meta'}</Text>
             <Text style={styles.subtitle}>
               Defina um objetivo financeiro e acompanhe o valor guardado com clareza.
             </Text>
@@ -105,13 +150,13 @@ export default function Target() {
           <View style={styles.form}>
             <Input
               label="Nome da meta"
-              placeholder="Ex: Viagem, notebook, reserva"
+              placeholder="Ex.: Viagem, notebook, reserva"
               value={name}
               onChangeText={setName}
             />
 
             <CurrencyInput
-              label="Valor alvo (R$)"
+              label="Valor-alvo (R$)"
               value={targetValue}
               onChangeValue={setTargetValue}
             />

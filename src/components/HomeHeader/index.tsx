@@ -39,7 +39,7 @@ export function HomeHeader({ data }: Props) {
           fontFamily: fontFamily.regular,
         }}
       >
-        Total que voce possui
+        Total que você possui
       </Text>
 
       <Text

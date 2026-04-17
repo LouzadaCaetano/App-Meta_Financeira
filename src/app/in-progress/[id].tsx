@@ -1,64 +1,38 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect } from 'react'
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@/components/Button'
 import { Progress } from '@/components/Progress'
 import { Transaction, TransactionData } from '@/components/Transaction'
+import { useGoals } from '@/context/goals-context'
 import { colors, fontFamily } from '@/theme'
 import { TransactionTypes } from '@/utils/TransactionTypes'
-
-const goals = {
-  '1': {
-    name: 'Viagem para o Rio',
-    current: 'R$ 580,00',
-    target: 'R$ 1.780,00',
-    percentage: 25,
-  },
-  '2': {
-    name: 'Notebook',
-    current: 'R$ 1.200,00',
-    target: 'R$ 4.000,00',
-    percentage: 30,
-  },
-}
-
-const transactionsByGoal: Record<string, TransactionData[]> = {
-  '1': [
-    {
-      id: 't1',
-      title: 'Guardar',
-      value: 'R$ 300,00',
-      type: TransactionTypes.Input,
-      date: '12 abr 2026',
-      description: 'Transferencia feita para acelerar a reserva da viagem.',
-    },
-    {
-      id: 't2',
-      title: 'Resgatar',
-      value: 'R$ 20,00',
-      type: TransactionTypes.Output,
-      date: '08 abr 2026',
-      description: 'Ajuste pontual para cobrir um gasto inesperado.',
-    },
-  ],
-  '2': [
-    {
-      id: 't3',
-      title: 'Guardar',
-      value: 'R$ 500,00',
-      type: TransactionTypes.Input,
-      date: '05 abr 2026',
-      description: 'Parte do bonus mensal direcionado para o notebook.',
-    },
-  ],
-}
+import { formatCurrency } from '@/utils/format'
 
 export default function InProgress() {
   const params = useLocalSearchParams<{ id: string }>()
   const targetId = Array.isArray(params.id) ? params.id[0] : params.id ?? '1'
-  const goal = goals[targetId as keyof typeof goals] ?? goals['1']
-  const transactions = transactionsByGoal[targetId] ?? transactionsByGoal['1']
+  const { deleteTransaction, getGoalById, getGoalProgress, getTransactionsByGoalId } = useGoals()
+  const goal = getGoalById(targetId)
+  const progress = getGoalProgress(targetId)
+  const transactions = getTransactionsByGoalId(targetId)
+
+  const transactionItems: TransactionData[] = transactions.map((item) => ({
+    id: item.id,
+    title: item.type === TransactionTypes.Input ? 'Valor guardado' : 'Valor resgatado',
+    value: formatCurrency(item.value),
+    type: item.type,
+    date: item.date,
+    description: item.reason,
+  }))
+
+  useEffect(() => {
+    if (!goal) {
+      router.replace('/')
+    }
+  }, [goal])
 
   function handleBack() {
     if (router.canGoBack()) {
@@ -70,18 +44,39 @@ export default function InProgress() {
   }
 
   function handleEdit() {
+    if (!goal) {
+      router.replace('/')
+      return
+    }
+
     router.navigate({ pathname: '/target', params: { id: targetId } })
   }
 
   function handleNewTransaction() {
+    if (!goal) {
+      router.replace('/')
+      return
+    }
+
     router.navigate(`/transaction/${targetId}`)
   }
 
   function handleRemoveTransaction(transaction: TransactionData) {
-    Alert.alert(
-      'Remocao indisponivel',
-      `A exclusao de "${transaction.title}" ainda nao foi implementada nesta etapa.`,
-    )
+    Alert.alert('Excluir transação', 'Deseja remover esta transação?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: () => deleteTransaction(targetId, transaction.id),
+      },
+    ])
+  }
+
+  if (!goal) {
+    return null
   }
 
   return (
@@ -111,37 +106,49 @@ export default function InProgress() {
           </Pressable>
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <View style={styles.summarySection}>
           <View style={styles.header}>
             <Text style={styles.title}>{goal.name}</Text>
             <Text style={styles.supportText}>Valor guardado</Text>
             <Text style={styles.amountText}>
-              {goal.current} <Text style={styles.amountMuted}>de {goal.target}</Text>
+              {formatCurrency(progress.currentValue)}{' '}
+              <Text style={styles.amountMuted}>de {formatCurrency(progress.targetValue)}</Text>
             </Text>
           </View>
 
-          <Progress percentage={goal.percentage} showValue />
+          <Progress percentage={progress.percentage} showValue />
+        </View>
 
-          <View style={styles.transactionsSection}>
-            <Text style={styles.sectionTitle}>Transacoes</Text>
+        <View style={styles.transactionsSection}>
+          <Text style={styles.sectionTitle}>Transações</Text>
 
-            <View style={styles.transactionsList}>
-              {transactions.map((item) => (
+          <View style={styles.transactionsList}>
+            <FlatList
+              data={transactionItems}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => (
                 <Transaction
-                  key={item.id}
                   data={item}
                   onRemove={() => handleRemoveTransaction(item)}
+                  hideBorder={index === transactionItems.length - 1}
                 />
-              ))}
-            </View>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.emptyMessage}>
+                  Nenhuma transação registrada para esta meta.
+                </Text>
+              }
+              contentContainerStyle={[
+                styles.transactionsListContent,
+                transactionItems.length === 0 && styles.transactionsListEmptyContent,
+              ]}
+              showsVerticalScrollIndicator={false}
+            />
           </View>
-        </ScrollView>
+        </View>
 
         <View style={styles.footer}>
-          <Button title="Nova transacao" onPress={handleNewTransaction} />
+          <Button title="Nova transação" onPress={handleNewTransaction} />
         </View>
       </View>
     </SafeAreaView>
@@ -187,9 +194,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fontFamily.medium,
   },
-  scrollContent: {
+  summarySection: {
     paddingTop: 28,
-    paddingBottom: 24,
     gap: 24,
   },
   header: {
@@ -219,6 +225,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
   },
   transactionsSection: {
+    flex: 1,
+    paddingTop: 24,
     gap: 14,
   },
   sectionTitle: {
@@ -227,12 +235,28 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
   },
   transactionsList: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    flex: 1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.gray[200],
     backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  transactionsListContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  transactionsListEmptyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyMessage: {
+    color: colors.gray[500],
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: fontFamily.regular,
+    textAlign: 'center',
+    paddingHorizontal: 12,
   },
   footer: {
     paddingTop: 12,

@@ -16,9 +16,10 @@ export type TransactionData = {
 type Props = {
   data: TransactionData
   onRemove?: () => void
+  hideBorder?: boolean
 }
 
-export function Transaction({ data, onRemove }: Props) {
+export function Transaction({ data, onRemove, hideBorder = false }: Props) {
   const isInput = data.type === TransactionTypes.Input
 
   return (
@@ -26,7 +27,7 @@ export function Transaction({ data, onRemove }: Props) {
       style={{
         width: '100%',
         paddingVertical: 14,
-        borderBottomWidth: 1,
+        borderBottomWidth: hideBorder ? 0 : 1,
         borderBottomColor: colors.gray[200],
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -72,7 +73,7 @@ export function Transaction({ data, onRemove }: Props) {
             }}
           >
             {data.title}
-            {data.date ? ` - ${data.date}` : ''}
+            {data.date ? ` • ${data.date}` : ''}
           </Text>
 
           {!!data.description && (

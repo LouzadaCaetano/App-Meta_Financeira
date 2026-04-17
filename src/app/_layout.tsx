@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router'
 import { colors } from '@/theme/colors'
 import { Loading } from '@/components/Loading'
+import { GoalsProvider } from '@/context/goals-context'
 import {
   useFonts,
   Inter_400Regular,
@@ -20,11 +21,13 @@ export default function Layout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.white },
-      }}
-    />
+    <GoalsProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.white },
+        }}
+      />
+    </GoalsProvider>
   )
 }

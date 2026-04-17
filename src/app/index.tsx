@@ -4,43 +4,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Button } from '@/components/Button'
 import { HomeHeader } from '@/components/HomeHeader'
 import { Progress } from '@/components/Progress'
+import { useGoals } from '@/context/goals-context'
 import { colors, fontFamily } from '@/theme'
 
-const summary = {
-  total: 'R$ 2.680,00',
-  input: { label: 'Entradas', value: 'R$ 6.184,90' },
-  output: { label: 'Saidas', value: '-R$ 883,65' },
-}
-
-type TargetItem = {
-  id: string
-  name: string
-  current: string
-  target: string
-  percentage: number
-}
-
-const targets: TargetItem[] = [
-  {
-    id: '1',
-    name: 'Viagem para o Rio',
-    current: 'R$ 580,00',
-    target: 'R$ 1.780,00',
-    percentage: 25,
-  },
-  {
-    id: '2',
-    name: 'Notebook',
-    current: 'R$ 1.200,00',
-    target: 'R$ 4.000,00',
-    percentage: 30,
-  },
-]
-
 export default function Index() {
+  const { homeGoals, homeSummary } = useGoals()
+
   return (
     <View style={styles.container}>
-      <HomeHeader data={summary} />
+      <HomeHeader data={homeSummary} />
 
       <ScrollView
         style={styles.content}
@@ -54,45 +26,54 @@ export default function Index() {
           </Text>
         </View>
 
-        <View style={styles.list}>
-          {targets.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={() => router.navigate(`/in-progress/${item.id}`)}
-              style={({ pressed }) => [
-                styles.goalCard,
-                pressed && styles.goalCardPressed,
-              ]}
-            >
-              <View style={styles.goalTopRow}>
-                <View style={styles.goalHeader}>
-                  <Text style={styles.goalName}>{item.name}</Text>
-                  <Text style={styles.goalPercent}>{item.percentage}% concluido</Text>
+        {homeGoals.length > 0 ? (
+          <View style={styles.list}>
+            {homeGoals.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => router.navigate(`/in-progress/${item.id}`)}
+                style={({ pressed }) => [
+                  styles.goalCard,
+                  pressed && styles.goalCardPressed,
+                ]}
+              >
+                <View style={styles.goalTopRow}>
+                  <View style={styles.goalHeader}>
+                    <Text style={styles.goalName}>{item.name}</Text>
+                    <Text style={styles.goalPercent}>{item.percentage}% concluído</Text>
+                  </View>
+
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={20}
+                    color={colors.gray[400]}
+                  />
                 </View>
 
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={colors.gray[400]}
-                />
-              </View>
+                <Progress percentage={item.percentage} />
 
-              <Progress percentage={item.percentage} />
+                <View style={styles.goalFooterRow}>
+                  <View>
+                    <Text style={styles.goalLabel}>Guardado</Text>
+                    <Text style={styles.goalValue}>{item.current}</Text>
+                  </View>
 
-              <View style={styles.goalFooterRow}>
-                <View>
-                  <Text style={styles.goalLabel}>Guardado</Text>
-                  <Text style={styles.goalValue}>{item.current}</Text>
+                  <View style={styles.goalFooterRight}>
+                    <Text style={styles.goalLabel}>Meta</Text>
+                    <Text style={styles.goalValue}>{item.target}</Text>
+                  </View>
                 </View>
-
-                <View style={styles.goalFooterRight}>
-                  <Text style={styles.goalLabel}>Meta</Text>
-                  <Text style={styles.goalValue}>{item.target}</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateTitle}>Nenhuma meta cadastrada</Text>
+            <Text style={styles.emptyStateText}>
+              Crie uma nova meta para começar a acompanhar seus objetivos.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Button title="Nova meta" onPress={() => router.navigate('/target')} />
@@ -136,6 +117,25 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 12,
+  },
+  emptyState: {
+    padding: 22,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    backgroundColor: colors.white,
+    gap: 6,
+  },
+  emptyStateTitle: {
+    color: colors.black,
+    fontSize: 16,
+    fontFamily: fontFamily.bold,
+  },
+  emptyStateText: {
+    color: colors.gray[500],
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: fontFamily.regular,
   },
   goalCard: {
     padding: 18,
