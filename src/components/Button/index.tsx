@@ -20,13 +20,18 @@ export function Button({
     <Pressable
       style={({ pressed }) => [
         {
-          height: 56,
+          height: 58,
           width: '100%',
-          borderRadius: 12,
+          borderRadius: 18,
           backgroundColor: colors.blue[500],
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: isDisabled ? 0.7 : pressed ? 0.9 : 1,
+          shadowColor: colors.blue[900],
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.16,
+          shadowRadius: 18,
+          elevation: 4,
+          opacity: isDisabled ? 0.65 : pressed ? 0.92 : 1,
         },
         typeof style === 'function' ? style({ pressed }) : style,
       ]}
@@ -41,6 +46,7 @@ export function Button({
             color: colors.white,
             fontSize: 16,
             fontFamily: fontFamily.bold,
+            letterSpacing: 0.2,
           }}
         >
           {title}

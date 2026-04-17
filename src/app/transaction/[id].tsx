@@ -1,82 +1,161 @@
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native'
-import { useLocalSearchParams, router } from 'expo-router'
+import { MaterialIcons } from '@expo/vector-icons'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { colors, fontFamily } from '@/theme'
-import { TransactionTypes } from '@/utils/TransactionTypes'
-import { TransactionType } from '@/components/TransactionType'
+import { Button } from '@/components/Button'
 import { CurrencyInput } from '@/components/CurrencyInput'
 import { Input } from '@/components/Input'
-import { Button } from '@/components/Button'
+import { TransactionType } from '@/components/TransactionType'
+import { colors, fontFamily } from '@/theme'
+import { TransactionTypes } from '@/utils/TransactionTypes'
 
 export default function Transaction() {
   const params = useLocalSearchParams<{ id: string }>()
   const targetId = Array.isArray(params.id) ? params.id[0] : params.id ?? ''
+  const fallbackRoute = targetId ? `/in-progress/${targetId}` : '/'
   const [type, setType] = useState(TransactionTypes.Input)
   const [value, setValue] = useState<number | null>(0)
   const [reason, setReason] = useState('')
 
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+
+    router.replace(fallbackRoute)
+  }
+
+  function handleSave() {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+
+    router.replace(fallbackRoute)
+  }
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        style={{ flex: 1, padding: 24, gap: 24 }}
+        style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Pressable onPress={() => router.back()}>
-          <Text
-            style={{
-              color: colors.black,
-              fontSize: 16,
-              fontFamily: fontFamily.medium,
-            }}
-          >
-            Voltar
-          </Text>
-        </Pressable>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={handleBack}
+              hitSlop={8}
+              style={({ pressed }) => [styles.topAction, pressed && styles.topActionPressed]}
+            >
+              <MaterialIcons name="arrow-back-ios-new" size={18} color={colors.black} />
+              <Text style={styles.topActionLabel}>Voltar</Text>
+            </Pressable>
 
-        <View style={{ gap: 4 }}>
-          <Text
-            style={{
-              color: colors.black,
-              fontSize: 28,
-              fontFamily: fontFamily.bold,
-            }}
-          >
-            Nova transação
-          </Text>
-          <Text
-            style={{
-              color: colors.gray[600],
-              fontSize: 14,
-              fontFamily: fontFamily.regular,
-            }}
-          >
-            Meta vinculada: {targetId}
-          </Text>
-        </View>
+            <View style={styles.topBarSpacer} />
+          </View>
 
-        <TransactionType selected={type} onChange={setType} />
+          <View style={styles.header}>
+            <Text style={styles.title}>Nova transacao</Text>
+            <Text style={styles.subtitle}>
+              Escolha se voce vai guardar ou resgatar um valor para a meta {targetId}.
+            </Text>
+          </View>
 
-        <CurrencyInput
-          label="Valor (R$)"
-          value={value}
-          onChangeValue={setValue}
-        />
+          <View style={styles.form}>
+            <TransactionType selected={type} onChange={setType} />
 
-        <Input
-          label="Motivo"
-          placeholder="Ex: Investir em CDB"
-          value={reason}
-          onChangeText={setReason}
-        />
+            <CurrencyInput label="Valor (R$)" value={value} onChangeValue={setValue} />
 
-        <View style={{ marginTop: 'auto' }}>
-          <Button
-            title={`Salvar na meta ${targetId}`}
-            onPress={() => router.replace(`/in-progress/${targetId}`)}
-          />
-        </View>
+            <Input
+              label="Motivo (opcional)"
+              placeholder="Ex: Investi em um CDB"
+              value={reason}
+              onChangeText={setReason}
+            />
+          </View>
+
+          <View style={styles.footer}>
+            <Button title="Salvar" onPress={handleSave} />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.gray[50],
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 28,
+  },
+  topAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  topActionPressed: {
+    opacity: 0.7,
+  },
+  topActionLabel: {
+    color: colors.black,
+    fontSize: 15,
+    fontFamily: fontFamily.medium,
+  },
+  topBarSpacer: {
+    width: 56,
+  },
+  header: {
+    marginTop: 28,
+    gap: 8,
+  },
+  title: {
+    color: colors.black,
+    fontSize: 34,
+    fontFamily: fontFamily.bold,
+    letterSpacing: -0.8,
+  },
+  subtitle: {
+    maxWidth: 325,
+    color: colors.gray[500],
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: fontFamily.regular,
+  },
+  form: {
+    marginTop: 28,
+    gap: 18,
+  },
+  footer: {
+    marginTop: 'auto',
+    paddingTop: 28,
+  },
+})

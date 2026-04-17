@@ -9,6 +9,8 @@ export type TransactionData = {
   title: string
   value: string
   type: TransactionTypes
+  date?: string
+  description?: string
 }
 
 type Props = {
@@ -23,35 +25,82 @@ export function Transaction({ data, onRemove }: Props) {
     <View
       style={{
         width: '100%',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.gray[100],
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.gray[200],
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
+        gap: 14,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <MaterialIcons
-          name={isInput ? 'arrow-upward' : 'arrow-downward'}
-          size={18}
-          color={isInput ? colors.blue[500] : colors.red[400]}
-        />
+      <View style={{ flexDirection: 'row', gap: 12, flex: 1 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: isInput ? '#E9F8EF' : '#FCECEC',
+          }}
+        >
+          <MaterialIcons
+            name={isInput ? 'arrow-upward' : 'arrow-downward'}
+            size={16}
+            color={isInput ? colors.green[500] : colors.red[500]}
+          />
+        </View>
 
-        <View>
-          <Text style={{ fontFamily: fontFamily.medium, color: colors.black }}>
-            {data.title}
-          </Text>
-          <Text style={{ marginTop: 4, color: colors.gray[500] }}>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: colors.black,
+              fontSize: 15,
+              fontFamily: fontFamily.bold,
+            }}
+          >
             {data.value}
           </Text>
+
+          <Text
+            style={{
+              marginTop: 2,
+              color: colors.gray[600],
+              fontSize: 12,
+              fontFamily: fontFamily.medium,
+            }}
+          >
+            {data.title}
+            {data.date ? ` - ${data.date}` : ''}
+          </Text>
+
+          {!!data.description && (
+            <Text
+              style={{
+                marginTop: 6,
+                color: colors.gray[500],
+                fontSize: 12,
+                lineHeight: 17,
+                fontFamily: fontFamily.regular,
+              }}
+            >
+              {data.description}
+            </Text>
+          )}
         </View>
       </View>
 
       {!!onRemove && (
-        <Pressable onPress={onRemove}>
-          <MaterialIcons name="delete" size={20} color={colors.gray[500]} />
+        <Pressable
+          onPress={onRemove}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.7 : 1,
+            paddingTop: 2,
+          })}
+        >
+          <MaterialIcons name="delete-outline" size={20} color={colors.gray[400]} />
         </Pressable>
       )}
     </View>

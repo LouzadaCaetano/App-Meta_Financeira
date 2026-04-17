@@ -17,6 +17,7 @@ export function CurrencyInput({ label, value, onChangeValue }: Props) {
           color: colors.gray[500],
           fontSize: 12,
           fontFamily: fontFamily.medium,
+          letterSpacing: 0.2,
         }}
       >
         {label}
@@ -24,11 +25,12 @@ export function CurrencyInput({ label, value, onChangeValue }: Props) {
 
       <View
         style={{
-          height: 56,
+          height: 58,
           width: '100%',
-          borderRadius: 12,
+          borderRadius: 16,
           borderWidth: 1,
-          borderColor: colors.gray[400],
+          borderColor: colors.gray[200],
+          backgroundColor: colors.gray[50],
           justifyContent: 'center',
           paddingHorizontal: 16,
         }}
@@ -41,7 +43,7 @@ export function CurrencyInput({ label, value, onChangeValue }: Props) {
           precision={2}
           prefix=""
           placeholder="0,00"
-          placeholderTextColor={colors.gray[500]}
+          placeholderTextColor={colors.gray[400]}
           style={{
             fontFamily: fontFamily.regular,
             fontSize: 16,

@@ -23,14 +23,27 @@ export function Summary({ data, icon, alignRight = false }: Props) {
       <View
         style={{
           flexDirection: 'row',
-          gap: 6,
+          gap: 8,
+          alignItems: 'center',
           justifyContent: alignRight ? 'flex-end' : 'flex-start',
         }}
       >
-        <MaterialIcons name={icon.name} size={16} color={icon.color} />
+        <View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.12)',
+          }}
+        >
+          <MaterialIcons name={icon.name} size={14} color={icon.color} />
+        </View>
+
         <Text
           style={{
-            color: colors.white,
+            color: 'rgba(255,255,255,0.82)',
             fontSize: 12,
             fontFamily: fontFamily.medium,
           }}
@@ -44,7 +57,7 @@ export function Summary({ data, icon, alignRight = false }: Props) {
           color: colors.white,
           fontSize: 18,
           fontFamily: fontFamily.bold,
-          marginTop: 6,
+          marginTop: 8,
           textAlign: alignRight ? 'right' : 'left',
         }}
       >

@@ -14,6 +14,7 @@ export function Input({ label, ...rest }: Props) {
           color: colors.gray[500],
           fontSize: 12,
           fontFamily: fontFamily.medium,
+          letterSpacing: 0.2,
         }}
       >
         {label}
@@ -21,16 +22,18 @@ export function Input({ label, ...rest }: Props) {
 
       <TextInput
         style={{
-          height: 56,
+          height: 58,
           width: '100%',
-          borderRadius: 12,
+          borderRadius: 16,
           borderWidth: 1,
-          borderColor: colors.gray[400],
+          borderColor: colors.gray[200],
+          backgroundColor: colors.gray[50],
           paddingHorizontal: 16,
           fontFamily: fontFamily.regular,
+          fontSize: 16,
           color: colors.black,
         }}
-        placeholderTextColor={colors.gray[500]}
+        placeholderTextColor={colors.gray[400]}
         {...rest}
       />
     </View>

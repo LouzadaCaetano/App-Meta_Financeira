@@ -21,29 +21,34 @@ export function HomeHeader({ data }: Props) {
 
   return (
     <LinearGradient
-      colors={[colors.blue[500], colors.blue[800]]}
+      colors={[colors.blue[800], colors.blue[900]]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={{
-        paddingTop: insets.top + 24,
+        paddingTop: insets.top + 20,
         paddingHorizontal: 24,
-        paddingBottom: 24,
+        paddingBottom: 34,
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28,
       }}
     >
       <Text
         style={{
-          color: colors.white,
-          fontSize: 14,
+          color: 'rgba(255,255,255,0.78)',
+          fontSize: 13,
           fontFamily: fontFamily.regular,
         }}
       >
-        Total que você possui
+        Total que voce possui
       </Text>
 
       <Text
         style={{
           color: colors.white,
-          fontSize: 32,
+          fontSize: 36,
           fontFamily: fontFamily.bold,
           marginTop: 10,
+          letterSpacing: -0.8,
         }}
       >
         {data.total}
@@ -51,17 +56,25 @@ export function HomeHeader({ data }: Props) {
 
       <View
         style={{
+          height: 1,
+          marginTop: 18,
+          marginBottom: 18,
+          backgroundColor: 'rgba(255,255,255,0.14)',
+        }}
+      />
+
+      <View
+        style={{
           flexDirection: 'row',
           alignItems: 'center',
-          marginTop: 18,
         }}
       >
         <Summary
           data={data.input}
-          icon={{ name: 'arrow-upward', color: colors.green[500] }}
+          icon={{ name: 'arrow-upward', color: colors.green[400] }}
         />
 
-        <Separator color={colors.blue[400]} />
+        <Separator color="rgba(255,255,255,0.12)" height={34} />
 
         <Summary
           alignRight
