@@ -1,5 +1,5 @@
 export const fontFamily = {
-  regular: "System",
-  medium: "System",
-  bold: "System",
-} as const;
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  bold: 'Inter_700Bold',
+} as const
