@@ -3,8 +3,17 @@ export const brl = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const percent = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
 export function formatCurrency(value: number) {
   return brl.format(value)
+}
+
+export function formatPercentage(value: number) {
+  return percent.format(value)
 }
 
 export function formatSignedCurrency(value: number) {

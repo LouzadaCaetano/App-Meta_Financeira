@@ -10,7 +10,7 @@ import { Target, TransactionsSummary } from '@/database/types'
 import { useTargetDatabase } from '@/database/useTargetDatabase'
 import { useTransactionsDatabase } from '@/database/useTransactionsDatabase'
 import { colors, fontFamily } from '@/theme'
-import { formatCurrency, formatSignedCurrency } from '@/utils/format'
+import { formatCurrency, formatPercentage, formatSignedCurrency } from '@/utils/format'
 
 export default function Index() {
   const targetDatabase = useTargetDatabase()
@@ -102,7 +102,9 @@ export default function Index() {
                 <View style={styles.goalTopRow}>
                   <View style={styles.goalHeader}>
                     <Text style={styles.goalName}>{item.name}</Text>
-                    <Text style={styles.goalPercent}>{item.percentage}% concluído</Text>
+                    <Text style={styles.goalPercent}>
+                      {formatPercentage(item.percentage)}% concluído
+                    </Text>
                   </View>
 
                   <MaterialIcons

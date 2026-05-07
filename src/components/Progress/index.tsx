@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native'
 import { colors } from '@/theme/colors'
 import { fontFamily } from '@/theme/fontFamily'
+import { formatPercentage } from '@/utils/format'
 
 type Props = {
   percentage: number
@@ -47,7 +48,7 @@ export function Progress({ percentage, showValue = false }: Props) {
             fontFamily: fontFamily.medium,
           }}
         >
-          {`${safe}%`}
+          {`${formatPercentage(safe)}%`}
         </Text>
       )}
     </View>
