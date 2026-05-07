@@ -1,38 +1,74 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect } from 'react'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@/components/Button'
+import { Loading } from '@/components/Loading'
 import { Progress } from '@/components/Progress'
 import { Transaction, TransactionData } from '@/components/Transaction'
-import { useGoals } from '@/context/goals-context'
+import { Target, Transaction as TransactionModel } from '@/database/types'
+import { useTargetDatabase } from '@/database/useTargetDatabase'
+import { useTransactionsDatabase } from '@/database/useTransactionsDatabase'
 import { colors, fontFamily } from '@/theme'
 import { TransactionTypes } from '@/utils/TransactionTypes'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatDateShort, formatSignedCurrency } from '@/utils/format'
 
 export default function InProgress() {
   const params = useLocalSearchParams<{ id: string }>()
-  const targetId = Array.isArray(params.id) ? params.id[0] : params.id ?? '1'
-  const { deleteTransaction, getGoalById, getGoalProgress, getTransactionsByGoalId } = useGoals()
-  const goal = getGoalById(targetId)
-  const progress = getGoalProgress(targetId)
-  const transactions = getTransactionsByGoalId(targetId)
+  const rawTargetId = Array.isArray(params.id) ? params.id[0] : params.id
+  const targetId = rawTargetId ? Number(rawTargetId) : null
+  const targetDatabase = useTargetDatabase()
+  const transactionsDatabase = useTransactionsDatabase()
+  const [target, setTarget] = useState<Target | null>(null)
+  const [transactions, setTransactions] = useState<TransactionModel[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  async function loadData() {
+    if (!Number.isInteger(targetId) || (targetId ?? 0) <= 0) {
+      router.replace('/')
+      return
+    }
+
+    const currentTargetId = targetId as number
+
+    try {
+      const [nextTarget, nextTransactions] = await Promise.all([
+        targetDatabase.show(currentTargetId),
+        transactionsDatabase.listByTargetId(currentTargetId),
+      ])
+
+      if (!nextTarget) {
+        router.replace('/')
+        return
+      }
+
+      setTarget(nextTarget)
+      setTransactions(nextTransactions)
+    } catch (error) {
+      console.warn('[InProgress] Falha ao carregar detalhes da meta.', error)
+      Alert.alert('Erro', 'Não foi possível carregar os dados da meta.')
+      router.replace('/')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsLoading(true)
+      void loadData()
+    }, [targetId]),
+  )
 
   const transactionItems: TransactionData[] = transactions.map((item) => ({
-    id: item.id,
-    title: item.type === TransactionTypes.Input ? 'Valor guardado' : 'Valor resgatado',
-    value: formatCurrency(item.value),
-    type: item.type,
-    date: item.date,
-    description: item.reason,
+    id: String(item.id),
+    title: item.amount >= 0 ? 'Valor guardado' : 'Valor resgatado',
+    value: formatSignedCurrency(item.amount),
+    type: item.amount >= 0 ? TransactionTypes.Input : TransactionTypes.Output,
+    date: formatDateShort(item.created_at),
+    description: item.observation,
   }))
-
-  useEffect(() => {
-    if (!goal) {
-      router.replace('/')
-    }
-  }, [goal])
 
   function handleBack() {
     if (router.canGoBack()) {
@@ -44,16 +80,16 @@ export default function InProgress() {
   }
 
   function handleEdit() {
-    if (!goal) {
+    if (!target) {
       router.replace('/')
       return
     }
 
-    router.navigate({ pathname: '/target', params: { id: targetId } })
+    router.navigate({ pathname: '/target', params: { id: String(targetId) } })
   }
 
   function handleNewTransaction() {
-    if (!goal) {
+    if (!target) {
       router.replace('/')
       return
     }
@@ -61,7 +97,7 @@ export default function InProgress() {
     router.navigate(`/transaction/${targetId}`)
   }
 
-  function handleRemoveTransaction(transaction: TransactionData) {
+  function handleRemoveTransaction(transactionId: string) {
     Alert.alert('Excluir transação', 'Deseja remover esta transação?', [
       {
         text: 'Cancelar',
@@ -70,12 +106,24 @@ export default function InProgress() {
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: () => deleteTransaction(targetId, transaction.id),
+        onPress: async () => {
+          try {
+            await transactionsDatabase.remove(Number(transactionId))
+            await loadData()
+          } catch (error) {
+            console.warn('[InProgress] Falha ao excluir transação.', error)
+            Alert.alert('Erro', 'Não foi possível excluir a transação.')
+          }
+        },
       },
     ])
   }
 
-  if (!goal) {
+  if (isLoading) {
+    return <Loading />
+  }
+
+  if (!target) {
     return null
   }
 
@@ -108,15 +156,15 @@ export default function InProgress() {
 
         <View style={styles.summarySection}>
           <View style={styles.header}>
-            <Text style={styles.title}>{goal.name}</Text>
+            <Text style={styles.title}>{target.name}</Text>
             <Text style={styles.supportText}>Valor guardado</Text>
             <Text style={styles.amountText}>
-              {formatCurrency(progress.currentValue)}{' '}
-              <Text style={styles.amountMuted}>de {formatCurrency(progress.targetValue)}</Text>
+              {formatCurrency(target.current)}{' '}
+              <Text style={styles.amountMuted}>de {formatCurrency(target.amount)}</Text>
             </Text>
           </View>
 
-          <Progress percentage={progress.percentage} showValue />
+          <Progress percentage={target.percentage} showValue />
         </View>
 
         <View style={styles.transactionsSection}>
@@ -129,7 +177,7 @@ export default function InProgress() {
               renderItem={({ item, index }) => (
                 <Transaction
                   data={item}
-                  onRemove={() => handleRemoveTransaction(item)}
+                  onRemove={() => handleRemoveTransaction(item.id)}
                   hideBorder={index === transactionItems.length - 1}
                 />
               )}

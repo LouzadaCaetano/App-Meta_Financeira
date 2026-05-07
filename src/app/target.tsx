@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,37 +15,71 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@/components/Button'
 import { CurrencyInput } from '@/components/CurrencyInput'
 import { Input } from '@/components/Input'
-import { useGoals } from '@/context/goals-context'
+import { Loading } from '@/components/Loading'
+import { useTargetDatabase } from '@/database/useTargetDatabase'
 import { colors, fontFamily } from '@/theme'
 
 export default function Target() {
   const params = useLocalSearchParams<{ id?: string }>()
-  const targetId = Array.isArray(params.id) ? params.id[0] : params.id
-  const isEditing = !!targetId
-  const { createGoal, deleteGoal, getGoalById, updateGoal } = useGoals()
-  const goal = targetId ? getGoalById(targetId) : undefined
-
-  const previewData = useMemo(() => {
-    if (goal) {
-      return goal
-    }
-
-    return { name: '', targetValue: 0 }
-  }, [goal])
-
-  const [name, setName] = useState(previewData.name)
-  const [targetValue, setTargetValue] = useState<number | null>(previewData.targetValue)
+  const rawTargetId = Array.isArray(params.id) ? params.id[0] : params.id
+  const targetId = rawTargetId ? Number(rawTargetId) : null
+  const isEditing = Number.isInteger(targetId) && (targetId ?? 0) > 0
+  const targetDatabase = useTargetDatabase()
+  const [name, setName] = useState('')
+  const [targetValue, setTargetValue] = useState<number | null>(0)
+  const [isLoading, setIsLoading] = useState(isEditing)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
-    setName(previewData.name)
-    setTargetValue(previewData.targetValue)
-  }, [previewData])
-
-  useEffect(() => {
-    if (isEditing && !goal) {
+    if (rawTargetId && !isEditing) {
       router.replace('/')
+      return
     }
-  }, [goal, isEditing])
+
+    if (!isEditing || !targetId) {
+      setName('')
+      setTargetValue(0)
+      setIsLoading(false)
+      return
+    }
+
+    let isMounted = true
+    const currentTargetId = targetId
+
+    async function loadTarget() {
+      try {
+        const target = await targetDatabase.show(currentTargetId)
+
+        if (!isMounted) {
+          return
+        }
+
+        if (!target) {
+          router.replace('/')
+          return
+        }
+
+        setName(target.name)
+        setTargetValue(target.amount)
+      } catch (error) {
+        console.warn('[Target] Falha ao carregar meta para edição.', error)
+        if (isMounted) {
+          Alert.alert('Erro', 'Não foi possível carregar a meta.')
+          router.replace('/')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadTarget()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isEditing, rawTargetId, targetId])
 
   function handleBack() {
     if (router.canGoBack()) {
@@ -56,7 +90,11 @@ export default function Target() {
     router.replace('/')
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (isProcessing) {
+      return
+    }
+
     const trimmedName = name.trim()
 
     if (!trimmedName) {
@@ -69,17 +107,33 @@ export default function Target() {
       return
     }
 
-    if (targetId) {
-      updateGoal(targetId, { name: trimmedName, targetValue })
-    } else {
-      createGoal({ name: trimmedName, targetValue })
-    }
+    try {
+      setIsProcessing(true)
 
-    router.replace('/')
+      if (isEditing && targetId) {
+        await targetDatabase.update({
+          id: targetId,
+          name: trimmedName,
+          amount: targetValue,
+        })
+      } else {
+        await targetDatabase.create({
+          name: trimmedName,
+          amount: targetValue,
+        })
+      }
+
+      router.replace('/')
+    } catch (error) {
+      console.warn('[Target] Falha ao salvar meta.', error)
+      Alert.alert('Erro', 'Não foi possível salvar a meta. Tente novamente.')
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   function handleDeletePreview() {
-    if (!targetId) {
+    if (!targetId || isProcessing) {
       return
     }
 
@@ -91,16 +145,24 @@ export default function Target() {
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: () => {
-          deleteGoal(targetId)
-          router.replace('/')
+        onPress: async () => {
+          try {
+            setIsProcessing(true)
+            await targetDatabase.remove(targetId)
+            router.replace('/')
+          } catch (error) {
+            console.warn('[Target] Falha ao excluir meta.', error)
+            Alert.alert('Erro', 'Não foi possível excluir a meta.')
+          } finally {
+            setIsProcessing(false)
+          }
         },
       },
     ])
   }
 
-  if (isEditing && !goal) {
-    return null
+  if (isLoading) {
+    return <Loading />
   }
 
   return (
@@ -153,6 +215,7 @@ export default function Target() {
               placeholder="Ex.: Viagem, notebook, reserva"
               value={name}
               onChangeText={setName}
+              editable={!isProcessing}
             />
 
             <CurrencyInput
@@ -163,7 +226,7 @@ export default function Target() {
           </View>
 
           <View style={styles.footer}>
-            <Button title="Salvar" onPress={handleSave} />
+            <Button title="Salvar" onPress={() => void handleSave()} isLoading={isProcessing} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

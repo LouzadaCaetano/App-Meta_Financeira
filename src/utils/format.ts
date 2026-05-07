@@ -1,8 +1,10 @@
+export const brl = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
+  return brl.format(value)
 }
 
 export function formatSignedCurrency(value: number) {
@@ -15,7 +17,16 @@ export function formatSignedCurrency(value: number) {
   return formatted
 }
 
-export function formatDateShort(date: Date) {
+function toDate(value: Date | string) {
+  if (value instanceof Date) {
+    return value
+  }
+
+  return new Date(value.replace(' ', 'T'))
+}
+
+export function formatDateShort(value: Date | string) {
+  const date = toDate(value)
   const day = String(date.getDate()).padStart(2, '0')
   const month = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][
     date.getMonth()

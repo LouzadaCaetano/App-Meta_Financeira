@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { Stack } from 'expo-router'
+import { SQLiteProvider } from 'expo-sqlite'
 import { colors } from '@/theme/colors'
 import { Loading } from '@/components/Loading'
-import { GoalsProvider } from '@/context/goals-context'
+import { migrate } from '@/database/migrate'
 import {
   useFonts,
   Inter_400Regular,
@@ -21,13 +23,15 @@ export default function Layout() {
   }
 
   return (
-    <GoalsProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.white },
-        }}
-      />
-    </GoalsProvider>
+    <Suspense fallback={<Loading />}>
+      <SQLiteProvider databaseName="target.db" onInit={migrate} useSuspense>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.white },
+          }}
+        />
+      </SQLiteProvider>
+    </Suspense>
   )
 }

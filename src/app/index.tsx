@@ -1,14 +1,76 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Button } from '@/components/Button'
 import { HomeHeader } from '@/components/HomeHeader'
+import { Loading } from '@/components/Loading'
 import { Progress } from '@/components/Progress'
-import { useGoals } from '@/context/goals-context'
+import { Target, TransactionsSummary } from '@/database/types'
+import { useTargetDatabase } from '@/database/useTargetDatabase'
+import { useTransactionsDatabase } from '@/database/useTransactionsDatabase'
 import { colors, fontFamily } from '@/theme'
+import { formatCurrency, formatSignedCurrency } from '@/utils/format'
 
 export default function Index() {
-  const { homeGoals, homeSummary } = useGoals()
+  const targetDatabase = useTargetDatabase()
+  const transactionsDatabase = useTransactionsDatabase()
+  const [targets, setTargets] = useState<Target[] | null>(null)
+  const [summary, setSummary] = useState<TransactionsSummary | null>(null)
+
+  async function loadData() {
+    try {
+      const [nextTargets, nextSummary] = await Promise.all([
+        targetDatabase.list(),
+        transactionsDatabase.getSummary(),
+      ])
+
+      setTargets(nextTargets)
+      setSummary(nextSummary)
+    } catch (error) {
+      console.warn('[Home] Falha ao carregar metas e resumo.', error)
+      setTargets([])
+      setSummary({
+        total: 0,
+        input: 0,
+        output: 0,
+      })
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadData()
+    }, []),
+  )
+
+  const homeGoals = useMemo(() => {
+    return (targets ?? []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      current: formatCurrency(item.current),
+      target: formatCurrency(item.amount),
+      percentage: item.percentage,
+    }))
+  }, [targets])
+
+  const homeSummary = useMemo(() => {
+    return {
+      total: formatCurrency(summary?.total ?? 0),
+      input: {
+        label: 'Entradas',
+        value: formatCurrency(summary?.input ?? 0),
+      },
+      output: {
+        label: 'Saídas',
+        value: formatSignedCurrency(-(summary?.output ?? 0)),
+      },
+    }
+  }, [summary])
+
+  if (!targets || !summary) {
+    return <Loading />
+  }
 
   return (
     <View style={styles.container}>
@@ -30,7 +92,7 @@ export default function Index() {
           <View style={styles.list}>
             {homeGoals.map((item) => (
               <Pressable
-                key={item.id}
+                key={String(item.id)}
                 onPress={() => router.navigate(`/in-progress/${item.id}`)}
                 style={({ pressed }) => [
                   styles.goalCard,
